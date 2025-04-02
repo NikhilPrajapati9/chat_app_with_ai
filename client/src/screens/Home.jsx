@@ -1,27 +1,28 @@
 import React, { useEffect, useState } from "react";
-import { useUser } from "../context/user.context";
 import { CirclePlus, Loader, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import axios from "../config/axios";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useSelector } from "react-redux";
 
 const Home = () => {
-  const { user } = useUser();
+  const user  =  useSelector(state => state.auth.user);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [loading, setLoading] = useState(false);
   const [projects, setProjects] = useState([]);
+
+  const navigate = useNavigate();
 
   function createProject(e) {
     e.preventDefault();
@@ -47,7 +48,6 @@ const Home = () => {
     axios
       .get("/project/all")
       .then((res) => {
-        console.log(res.data.data);
         setProjects(res.data.data);
       })
       .catch((err) => {
@@ -68,12 +68,16 @@ const Home = () => {
         {projects.map((project) => (
           <div
             key={project._id}
+            onClick={() => navigate("/project",{
+              state: {project}
+            })}
             className="project flex-col flex gap-2 items-start cursor-pointer text-white bg-green-700 p-4 border hover:bg-green-600 border-slate-300 rounded-md"
           >
             <h2>Name: {project?.name}</h2>
 
             <div className="flex gap-2 items-center">
-              <Users />{project.users.length}
+              <Users />
+              {project?.users?.length}
             </div>
           </div>
         ))}

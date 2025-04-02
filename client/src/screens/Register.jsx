@@ -3,13 +3,14 @@ import { Mail, Lock, User } from "lucide-react";
 import { toast } from "sonner";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "../config/axios";
-import { useUser } from "../context/user.context";
+import { useDispatch } from "react-redux";
+import { login as authLogin } from "../store/authSlice";
 
 const Register = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { setUser } = useUser();
+  const dispacth = useDispatch();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -29,7 +30,7 @@ const Register = () => {
       })
       .then((res) => {
         localStorage.setItem("token", res.data.data.token);
-        setUser(res.data.data.user);
+        dispacth(authLogin(res.data.data.user));
         toast.success("Register Successful");
         setLoading(false);
         navigate("/");

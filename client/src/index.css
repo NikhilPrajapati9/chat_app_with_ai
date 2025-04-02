@@ -124,3 +124,10 @@
     @apply bg-background text-foreground;
   }
 }
+
+.message-box {
+  scroll-behavior: smooth;
+}
+.message-box::-webkit-scrollbar {
+  display: none;
+}
