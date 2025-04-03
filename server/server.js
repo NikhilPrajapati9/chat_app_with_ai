@@ -5,6 +5,8 @@ import { Server } from "socket.io";
 import jwt from "jsonwebtoken"
 import projectModel from "./models/project.model.js"
 import mongoose from 'mongoose';
+import { generateResult } from './services/ai.service.js';
+import { Result } from 'express-validator';
 
 
 const PORT = process.env.PORT || 3000
@@ -59,9 +61,27 @@ io.on('connection', socket => {
 
     socket.join(socket.roomId);
 
-    socket.on('project-message', data => {
-        console.log(data);
+    socket.on('project-message', async data => {
+        const message = data.message
+
+        const aiIsPresentInMessage = message.includes('@ai');
+
         socket.broadcast.to(socket.roomId).emit('project-message', data)
+
+        if (aiIsPresentInMessage) {
+            const prompt = message.replace('@ai', '')
+
+            const result = await generateResult(prompt);
+
+            io.to(socket.roomId).emit('project-message', {
+                message: result,
+                sender: {
+                    _id: 'ai',
+                    email: "AI"
+                }
+            })
+            return
+        }
     })
 
     socket.on('disconnect', () => {

@@ -8,16 +8,36 @@ import {
   X,
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { data, useLocation } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import ChatBubble from "../components/ChatBubble";
 import axios from "../config/axios";
 import { initializeSocket, reciveMessage, sendMessage } from "../config/socket";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { nanoid } from "@reduxjs/toolkit";
+import Markdown from "markdown-to-jsx";
+import { pushMessages, resetMessages } from "../store/messageSlice";
+import hljs from "highlight.js";
+import { getWebContainer } from "../config/webContainer";
+
+function SyntaxHighlightedCode(props) {
+  const ref = useRef(null);
+
+  React.useEffect(() => {
+    if (ref.current && props.className?.includes("lang-") && window.hljs) {
+      window.hljs.highlightElement(ref.current);
+
+      // hljs won't reprocess the element unless this attribute is removed
+      ref.current.removeAttribute("data-highlighted");
+    }
+  }, [props.className, props.children]);
+
+  return <code {...props} ref={ref} />;
+}
 
 const Project = () => {
   const user = useSelector((state) => state.auth.user);
+  const messages = useSelector((state) => state.chat.messages);
   const location = useLocation();
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -25,8 +45,15 @@ const Project = () => {
   const [users, setUsers] = useState([]);
   const [project, setProject] = useState([]);
   const [message, setMessage] = useState("");
-  const [chatMessages, setChatMessages] = useState([]);
+  const [chatMessages, setChatMessages] = useState([...messages]);
   const messageBox = useRef();
+  const dispatch = useDispatch();
+  const [fileTree, setFileTree] = useState({});
+  const [currentFile, setCurrentFile] = useState(null);
+  const [openFiles, setOpenFiles] = useState([]);
+  const [webContainer, setWebContainer] = useState(null);
+  const [iframeUrl, setIframeUrl] = useState(null);
+  const [runProcess, setRunProcess] = useState(null);
 
   const handleUserClick = (id) => {
     setSelectedUserId((prevSelectedUserId) => {
@@ -68,8 +95,17 @@ const Project = () => {
 
       setChatMessages((prev) => [
         ...prev,
-        { message: message, sender: { _id: user._id, email: user.email } },
+        {
+          message: message,
+          sender: { _id: user._id, email: user.email },
+        },
       ]);
+      dispatch(
+        pushMessages({
+          message: message,
+          sender: { _id: user._id, email: user.email },
+        })
+      );
       scrollToBottom();
       setMessage("");
     }
@@ -78,9 +114,28 @@ const Project = () => {
   useEffect(() => {
     initializeSocket(location.state.project._id);
 
+    if (!webContainer) {
+      getWebContainer().then((container) => {
+        setWebContainer(container);
+        console.log("container started");
+      });
+    }
+
     reciveMessage("project-message", (data) => {
-      console.log(Object(data));
-      setChatMessages((prev) => [...prev, data]);
+      if (data.sender._id == "ai") {
+        const message = JSON.parse(data.message);
+        console.log("message", message);
+
+       webContainer?.mount(message.fileTree);
+
+        if (message.fileTree) {
+          setFileTree(message.fileTree || {});
+        }
+        setChatMessages((prev) => [...prev, data]);
+      } else {
+        setChatMessages((prev) => [...prev, data]);
+      }
+      dispatch(pushMessages(data));
       scrollToBottom();
     });
 
@@ -107,17 +162,26 @@ const Project = () => {
     <main className="h-screen w-screen flex">
       <section className="left relative h-full rounded-r-3xl min-w-80 max-w-90 flex flex-col bg-slate-300">
         {/* header */}
-        <header className="flex z-10 shadow-md absolute top-0 mb-4 bg-gray-300 rounded-r-full justify-end p-2 w-full">
+        <header className="flex shadow-md absolute top-0 mb-4 bg-gray-300 rounded-r-full justify-end p-2 w-full">
+          <Button
+            onClick={() => {
+              dispatch(resetMessages());
+              setChatMessages([]);
+            }}
+            className="rounded-full self-start shadow-lg cursor-pointer  p-5 bg-gray-600 active:bg-gray-400 active:text-black"
+          >
+            <h1>C</h1>
+          </Button>
           <Button
             onClick={() => setIsModalOpen(!isModalOpen)}
-            className="rounded-full self-start shadow-lg cursor-pointer  p-5 bg-gray-600 active:bg-gray-400 active:text-black"
+            className="rounded-full ml-1 self-start shadow-lg cursor-pointer  p-5 bg-gray-600 active:bg-gray-400 active:text-black"
           >
             <UserPlus />
             <h1>Add Member</h1>
           </Button>
           <Button
             onClick={() => setIsSidePanelOpen(!isSidePanelOpen)}
-            className="rounded-full ml-2 a shadow-lg cursor-pointer p-5 bg-gray-600 active:bg-gray-400 active:text-black"
+            className="rounded-full ml-1 a shadow-lg cursor-pointer p-5 bg-gray-600 active:bg-gray-400 active:text-black"
           >
             <Users2 />
             <h1>All Member</h1>
@@ -130,15 +194,40 @@ const Project = () => {
             ref={messageBox}
             className="message-box py-15 flex flex-col overflow-auto"
           >
-            {Array.from(chatMessages).map((chatMessage) => (
-              <ChatBubble
-                key={nanoid()}
-                message={chatMessage.message}
-                isOwn={chatMessage.sender._id === user._id}
-                email={chatMessage.sender.email}
-                timestamp=""
-              />
-            ))}
+            {chatMessages.length > 0 &&
+              chatMessages.map((chatMessage) => (
+                <ChatBubble
+                  className={`${
+                    chatMessage.sender._id === "ai"
+                      ? "text-white bg-gray-900"
+                      : null
+                  }`}
+                  key={nanoid()}
+                  message={
+                    chatMessage.sender._id === "ai" ? (
+                      <div className="max-w-70 scroll-auto ">
+                        <Markdown
+                          children={
+                            chatMessage.sender._id === "ai"
+                              ? JSON.parse(chatMessage.message).text
+                              : chatMessage.message
+                          }
+                          options={{
+                            overrides: {
+                              code: SyntaxHighlightedCode,
+                            },
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      chatMessage.message
+                    )
+                  }
+                  isOwn={chatMessage.sender._id === user._id}
+                  email={chatMessage.sender.email}
+                  timestamp=""
+                />
+              ))}
           </div>
           <form action={send}>
             <div className="inputField flex mb-1 gap-1 mx-1 bg-gray-300 border-1 border-gray-700 rounded-full ">
@@ -188,6 +277,139 @@ const Project = () => {
               ))}
           </div>
         </div>
+      </section>
+
+      <section className="right flex-grow h-full flex">
+        <div className="explorer h-full max-w-64 min-w-52 bg-gray-400">
+          <div className="file-tree w-full">
+            {Object.keys(fileTree).map((file, index) => (
+              <button
+                key={index}
+                onClick={() => {
+                  setCurrentFile(file);
+                  setOpenFiles([...new Set([...openFiles, file])]);
+                }}
+                className="tree-element cursor-pointer p-2 px-4 flex items-center gap-2 bg-slate-300 w-full"
+              >
+                <p className="font-semibold text-lg">{file}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="code-editor flex flex-col flex-grow h-full shrink">
+          <div className="top flex justify-between w-full">
+            <div className="files flex">
+              {openFiles.map((file, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentFile(file)}
+                  className={`open-file cursor-pointer p-2 px-4 flex items-center w-fit gap-2 bg-slate-300 ${
+                    currentFile === file ? "bg-slate-400" : ""
+                  }`}
+                >
+                  <p className="font-semibold text-lg">{file}</p>
+                </button>
+              ))}
+            </div>
+
+            <div className="actions flex gap-2">
+              <button
+                onClick={async () => {
+                  await webContainer.mount(fileTree);
+
+                  const installProcess = await webContainer.spawn("npm", [
+                    "install",
+                  ]);
+
+                  installProcess.output.pipeTo(
+                    new WritableStream({
+                      write(chunk) {
+                        console.log(chunk);
+                      },
+                    })
+                  );
+
+                  if (runProcess) {
+                    runProcess.kill();
+                  }
+
+                  let tempRunProcess = await webContainer.spawn("npm", [
+                    "start",
+                  ]);
+
+                  tempRunProcess.output.pipeTo(
+                    new WritableStream({
+                      write(chunk) {
+                        console.log(chunk);
+                      },
+                    })
+                  );
+
+                  setRunProcess(tempRunProcess);
+
+                  webContainer.on("server-ready", (port, url) => {
+                    console.log(port, url);
+                    setIframeUrl(url);
+                  });
+                }}
+                className="p-2 px-4 cursor-pointer bg-slate-500 hover:bg-gray-700 text-white"
+              >
+                run
+              </button>
+            </div>
+          </div>
+          <div className="bottom flex flex-grow max-w-full shrink overflow-auto">
+            {fileTree[currentFile] && (
+              <div className="code-editor-area h-full overflow-auto flex-grow bg-slate-50">
+                <pre className="hljs h-full">
+                  <code
+                    className="hljs h-full outline-none"
+                    contentEditable
+                    suppressContentEditableWarning
+                    onBlur={(e) => {
+                      const updatedContent = e.target.innerText;
+                      const ft = {
+                        ...fileTree,
+                        [currentFile]: {
+                          file: {
+                            contents: updatedContent,
+                          },
+                        },
+                      };
+                      setFileTree(ft);
+                      // saveFileTree(ft);
+                    }}
+                    dangerouslySetInnerHTML={{
+                      __html: hljs.highlight(
+                        "javascript",
+                        fileTree[currentFile].file.contents
+                      ).value,
+                    }}
+                    style={{
+                      whiteSpace: "pre-wrap",
+                      paddingBottom: "25rem",
+                      counterSet: "line-numbering",
+                    }}
+                  />
+                </pre>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {iframeUrl && webContainer && (
+          <div className="flex min-w-96 flex-col h-full">
+            <div className="address-bar">
+              <input
+                type="text"
+                onChange={(e) => setIframeUrl(e.target.value)}
+                value={iframeUrl}
+                className="w-full p-2 px-4 bg-slate-200"
+              />
+            </div>
+            <iframe src={iframeUrl} className="w-full h-full"></iframe>
+          </div>
+        )}
       </section>
 
       {isModalOpen && (

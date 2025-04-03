@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import axios from "../config/axios";
 import { useDispatch } from "react-redux";
 import { login as authLogin } from "../store/authSlice";
+import { resetMessages } from "../store/messageSlice";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -32,6 +33,7 @@ const Login = () => {
       .then((res) => {
         localStorage.setItem("token", res.data.data.token);
         dispacth(authLogin(res.data.data.user));
+        dispacth(resetMessages());
         toast.success("Login Successful");
         setLoading(false);
         navigate("/");

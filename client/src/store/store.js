@@ -1,5 +1,6 @@
 import { combineReducers, configureStore } from "@reduxjs/toolkit"
 import authReducer from "./authSlice"
+import messageReducer from "./messageSlice"
 import {
     persistReducer,
     FLUSH,
@@ -20,6 +21,7 @@ const persistConfig = {
 
 const rootReducer = combineReducers({
     auth: authReducer,
+    chat: messageReducer
 })
 
 const persistedReducer = persistReducer(persistConfig, rootReducer)
