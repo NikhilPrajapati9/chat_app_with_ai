@@ -1,6 +1,7 @@
 import {
   ArrowLeftFromLine,
   CircleCheckBig,
+  House,
   Navigation,
   User2,
   UserPlus,
@@ -8,7 +9,7 @@ import {
   X,
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
-import { data, useLocation } from "react-router-dom";
+import { data, Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import ChatBubble from "../components/ChatBubble";
 import axios from "../config/axios";
@@ -19,6 +20,7 @@ import Markdown from "markdown-to-jsx";
 import { pushMessages, resetMessages } from "../store/messageSlice";
 import hljs from "highlight.js";
 import { getWebContainer } from "../config/webContainer";
+import LogoutBtn from "../components/LogoutBtn";
 
 function SyntaxHighlightedCode(props) {
   const ref = useRef(null);
@@ -54,6 +56,7 @@ const Project = () => {
   const [webContainer, setWebContainer] = useState(null);
   const [iframeUrl, setIframeUrl] = useState(null);
   const [runProcess, setRunProcess] = useState(null);
+  const navigate = useNavigate();
 
   const handleUserClick = (id) => {
     setSelectedUserId((prevSelectedUserId) => {
@@ -126,7 +129,7 @@ const Project = () => {
         const message = JSON.parse(data.message);
         console.log("message", message);
 
-       webContainer?.mount(message.fileTree);
+        webContainer?.mount(message.fileTree);
 
         if (message.fileTree) {
           setFileTree(message.fileTree || {});
@@ -158,12 +161,27 @@ const Project = () => {
       });
   }, []);
 
+  function saveFileTree(ft) {
+    axios
+      .put("/projects/update-file-tree", {
+        projectId: project._id,
+        fileTree: ft,
+      })
+      .then((res) => {
+        console.log(res.data);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  }
+
   return (
     <main className="h-screen w-screen flex">
       <section className="left relative h-full rounded-r-3xl min-w-80 max-w-90 flex flex-col bg-slate-300">
         {/* header */}
         <header className="flex shadow-md absolute top-0 mb-4 bg-gray-300 rounded-r-full justify-end p-2 w-full">
           <Button
+          title="Clear all messages"
             onClick={() => {
               dispatch(resetMessages());
               setChatMessages([]);
@@ -239,6 +257,7 @@ const Project = () => {
                 className="border-none w-full pl-4 bg-transparent active:bg-transparent active:outline-none text-md focus:outline-none "
               />
               <Button
+                title="Send message"
                 type="submit"
                 className="bg-gray-600 cursor-pointer py-5 rounded-full"
               >
@@ -255,7 +274,16 @@ const Project = () => {
         >
           <header className="flex shadow-md bg-gray-300 rounded-full justify-between items-center pl-5 p-2 w-full">
             <h1 className="text-lg font-medium">All Members</h1>
+            <LogoutBtn className="rounded-full shadow-lg cursor-pointer p-5 bg-gray-600 active:bg-gray-400 active:text-black" />
             <Button
+              onClick={() => navigate("/")}
+              title="Home"
+              className="rounded-full shadow-lg cursor-pointer p-5 bg-gray-600 active:bg-gray-400 active:text-black"
+            >
+              <House />
+            </Button>
+            <Button
+              title="Close"
               onClick={() => setIsSidePanelOpen(!isSidePanelOpen)}
               className="rounded-full shadow-lg cursor-pointer p-5 bg-gray-600 active:bg-gray-400 active:text-black"
             >
@@ -377,7 +405,7 @@ const Project = () => {
                         },
                       };
                       setFileTree(ft);
-                      // saveFileTree(ft);
+                      saveFileTree(ft);
                     }}
                     dangerouslySetInnerHTML={{
                       __html: hljs.highlight(

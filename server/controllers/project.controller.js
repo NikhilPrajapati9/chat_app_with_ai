@@ -63,3 +63,23 @@ export const getProjectById = asyncHandler(async (req, res) => {
 
     return res.status(200).json(new ApiResponse(200, project));
 })
+
+
+export const updateFileTree = asyncHandler(async (req, res) => {
+    const errors = validationResult(req);
+
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
+
+    const { projectId, fileTree } = req.body;
+
+    const project = await projectService.updateFileTree({
+        projectId,
+        fileTree
+    })
+
+    return res.status(200).json(new ApiResponse(200, project))
+
+})

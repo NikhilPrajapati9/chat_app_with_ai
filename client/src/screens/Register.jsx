@@ -42,7 +42,7 @@ const Register = () => {
       });
   };
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-purple-900 via-violet-800 to-blue-700 p-4">
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-zinc-900 via-gray-800 to-slate-700 p-4">
       <div className="w-full max-w-md">
         <div className="backdrop-blur-sm bg-white/10 rounded-2xl px-8 pt-8 pb-4 shadow-xl border border-white/10">
           <div className="flex justify-center mb-4">
@@ -82,7 +82,7 @@ const Register = () => {
 
             <button
               type="submit"
-              className={`w-full cursor-pointer mt-5 py-3 px-4 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-500 text-white rounded-lg shadow-lg hover:from-purple-700 hover:via-indigo-700 hover:to-blue-600 transition-all duration-300 font-medium ${
+              className={`w-full cursor-pointer mt-5 py-3 px-4 bg-gradient-to-r from-gray-600 via-slate-600 to-zinc-500 text-white rounded-lg shadow-lg hover:from-slate-700 hover:via-zinc-700 hover:to-gray-600 transition-all duration-300 font-medium ${
                 loading ? "cursor-not-allowed bg-gray-600" : null
               }}`}
               disabled={loading}
@@ -94,7 +94,7 @@ const Register = () => {
           <div className="text-center mt-4 mb-0">
             <p className="text-white">
               Already have an account?{" "}
-              <Link to={"/login"} className="text-blue-400">
+              <Link to={"/login"} className="text-blue-500">
                 Login
               </Link>
             </p>

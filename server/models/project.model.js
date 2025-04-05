@@ -14,6 +14,10 @@ const projectSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: "user"
     }],
+    fileTree: {
+        type: Object,
+        default: {}
+    }
 
 })
 
