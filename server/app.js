@@ -23,8 +23,8 @@ app.use(cookieParser())
 
 
 //routes
-app.use('/users', userRoutes)
-app.use('/project', projectRoutes)
-app.use('/ai', aiRoutes)
+app.use('api/users', userRoutes)
+app.use('api/project', projectRoutes)
+app.use('api/ai', aiRoutes)
 
 export default app

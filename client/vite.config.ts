@@ -11,6 +11,7 @@ export default defineConfig({
       "Cross-Origin-Opener-Policy": "same-origin",
     },
     proxy: {
+      "/api":"https://codechat-indol.vercel.app",
       "/cdn": {
         target: "https://unpkg.com",
         changeOrigin: true,
